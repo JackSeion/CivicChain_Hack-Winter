@@ -23,7 +23,8 @@ Existing systems are **centralized, expensive, and opaque**, resulting in low tr
 
 - Simple citizen complaint reporting  
 - Automatic duplicate detection using geolocation  
-- Citizen-verified complaint resolution  
+- Citizen-verified complaint resolution
+- Public Voting for issue priority 
 - Public city performance leaderboards  
 - A unified backend for app and dashboard  
 - Future blockchain-based auditability  
@@ -111,7 +112,7 @@ This ensures **citizen-approved resolution**, not just internal status updates.
 
 ### 🏠 Home Screen
 - Displays all complaints from the user’s city  
-- Real-time updates and filtering  
+- Real-time updates, filtering and voting
 
 ### ➕ Report Complaint
 - Upload photo  
@@ -140,6 +141,10 @@ This ensures **citizen-approved resolution**, not just internal status updates.
 - Secure, role-based access  
 - City-specific data visibility  
 
+### 📋High priority Complaint View
+- Most voted Complaints gets higher priority view  
+- One place to view all priority complaint irrespective of department
+- 
 ### 📋 Department-wise Complaint View
 - Complaints grouped by department  
 - Status updates and management  
@@ -157,11 +162,11 @@ This ensures **citizen-approved resolution**, not just internal status updates.
 ## ⭐ What Makes CivicChain Different
 
 - Automatic duplicate detection using geolocation  
-- Citizen confirmation before complaint closure  
+- Citizen confirmation before complaint closure
+- Public voting to prioritize real issues  
 - Public city leaderboard for accountability  
 - Unified Supabase backend (app + dashboard)  
-- Blockchain used only where auditability is required  
-- API-ready for integration with e-governance systems  
+- Blockchain used only where auditability is required   
 
 ---
 
@@ -170,7 +175,8 @@ This ensures **citizen-approved resolution**, not just internal status updates.
 - Verified and resolved complaint IDs logged on-chain  
 - Immutable public audit trail  
 - One backend-controlled admin wallet  
-- No user wallet required  
+- No user wallet required
+- Makes data tamper proof and goernment accountable
 
 Blockchain is used as a **trust layer**, not as a database replacement.
 
@@ -198,10 +204,12 @@ Enables **top-down governance oversight**.
 ## 💰 Cost Effectiveness
 
 - No heavy infrastructure  
-- Supabase free / low-cost tier  
+- Supabase free / low-cost tier 
 - Blockchain cost < ₹1 per complaint (L2 network)  
 - No vendor lock-in  
-- Easily scalable across cities  
+- Easily scalable across cities
+- Cost 6k-8k rupees for an average city(combining supabase + blockchain + other costs)
+- 90% cheaper from available solutions 
 
 ---
 
