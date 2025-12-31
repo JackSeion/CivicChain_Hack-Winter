@@ -8,6 +8,9 @@ Project Intro:- https://drive.google.com/file/d/15wfw7bBbBs6D1WDvEtjfzTKL7YXAqJ1
 Team Contribution:-
 
 1- Ajay Chauhan(leader):- App-backend & Blockchain(for 2nd round) 
-2- Gautam Kumar:- App- frontend + backend
+
+2- Gautam Kumar:- App- frontend + backend & API
+
 3- Kanishk Bhandari:- Supabase + Website(Frontend + backend)
-4- Prem:- Website- Backend
+
+4- Prem:- Website- Backend & AI(for round 2)
