@@ -26,9 +26,9 @@ Display in City Feed
 
 ---
 
-## 🔹 Flow 2: Duplicate Complaint Detection
+## 🔹 Flow 1: Technical Flow
 
-![image alt](image_url)
+![image alt](image_url)https://github.com/JackSeion/CivicChain_Hack-Winter/blob/2244b0ce817d4d5d64f2ec2c8fedfa761dd4b130/techflow.jpeg
 
 ---
 
