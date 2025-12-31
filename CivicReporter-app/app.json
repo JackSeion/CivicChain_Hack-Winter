@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "CivicReporter",
+    "slug": "CivicReporter",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/images/icon.png",
+    "scheme": "civicreporter",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./src/assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We use your location to attach accurate coordinates and address to complaints you submit.",
+        "NSCameraUsageDescription": "We use the camera so you can take a photo of the issue.",
+        "NSPhotoLibraryUsageDescription": "We need access to your photos so you can attach an image to your complaint.",
+        "NSPhotoLibraryAddUsageDescription": "We may save photos to your library if needed."
+      }
+    },
+    "android": {
+      "package": "com.civicreporter.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_MEDIA_IMAGES"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBWak1GmJvHzfiRHKnE9_oHAzsuZtwEqrU"
+        }
+      },
+      "enableProguardInReleaseBuilds": true,
+      "enableHermes": true
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "platforms": [
+      "android",
+      "ios"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "dfa5f94d-7ab3-46cb-b044-57ac2e593519"
+      }
+    }
+  }
+}
