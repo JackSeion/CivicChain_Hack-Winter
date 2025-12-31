@@ -28,6 +28,12 @@ Display in City Feed
 
 ## 🔹 Flow 2: Duplicate Complaint Detection
 
+![image alt](image_url)
+
+---
+
+## 🔹 Flow 2: Duplicate Complaint Detection
+
 Duplicate detection is based on **geolocation precision and category**.
 
 New Complaint
