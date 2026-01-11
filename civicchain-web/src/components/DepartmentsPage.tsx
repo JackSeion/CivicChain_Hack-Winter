@@ -26,6 +26,8 @@ interface Complaint {
   verificationCount?: number;
   daysPending?: number;
   resolvedByOfficer?: string;
+  parentComplaintId?: number;
+  departmentReferral?: string;
 }
 
 interface DepartmentsPageProps {
@@ -33,9 +35,10 @@ interface DepartmentsPageProps {
   onResolve: (id: number, imageUrl: string) => void;
   loading?: boolean;
   selectedComplaintId?: number | null;
+  onLinkComplaint?: (complaint: Complaint) => void;
 }
 
-export function DepartmentsPage({ complaints, onResolve, loading, selectedComplaintId }: DepartmentsPageProps) {
+export function DepartmentsPage({ complaints, onResolve, loading, selectedComplaintId, onLinkComplaint }: DepartmentsPageProps) {
   const [categories, setCategories] = useState<api.Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -187,6 +190,7 @@ export function DepartmentsPage({ complaints, onResolve, loading, selectedCompla
                       complaint={complaint}
                       onResolve={onResolve}
                       onClick={setSelectedComplaint}
+                      onLinkClick={onLinkComplaint}
                     />
                   ))
                 ) : (
@@ -208,6 +212,7 @@ export function DepartmentsPage({ complaints, onResolve, loading, selectedCompla
                       complaint={complaint}
                       onResolve={onResolve}
                       onClick={setSelectedComplaint}
+                      onLinkClick={onLinkComplaint}
                     />
                   ))
                 ) : (
@@ -229,6 +234,7 @@ export function DepartmentsPage({ complaints, onResolve, loading, selectedCompla
                       complaint={complaint}
                       onResolve={onResolve}
                       onClick={setSelectedComplaint}
+                      onLinkClick={onLinkComplaint}
                     />
                   ))
                 ) : (
@@ -332,6 +338,15 @@ export function DepartmentsPage({ complaints, onResolve, loading, selectedCompla
           );
         })}
       </div>
+
+      {/* Complaint Details Dialog */}
+      {selectedComplaint && (
+        <ComplaintDetailsDialog
+          isOpen={!!selectedComplaint}
+          onClose={() => setSelectedComplaint(null)}
+          complaint={selectedComplaint}
+        />
+      )}
     </div>
   );
 }

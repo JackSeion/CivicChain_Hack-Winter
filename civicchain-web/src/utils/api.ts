@@ -21,6 +21,9 @@ export interface Complaint {
   daysPending?: number;
   resolvedBy?: string;
   resolvedByOfficer?: string;
+  parentComplaintId?: number; // For linked complaints
+  departmentReferral?: string; // Department that referred this task
+  referralNotes?: string; // Notes from referring department
 }
 
 export interface Category {
@@ -83,9 +86,43 @@ export async function getCategories(): Promise<Category[]> {
   return fetchAPI('/categories');
 }
 
-// Complaints API
+// Complaints API - use direct Supabase query to get all fields including created_by
 export async function getComplaintsByMunicipal(municipalId: string): Promise<Complaint[]> {
-  return fetchAPI(`/complaints/${municipalId}`);
+  const { createClient } = await import('./supabase/client');
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('complaints')
+    .select('*')
+    .eq('municipal_id', municipalId)
+    .order('submitted_date', { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to fetch complaints: ${error.message}`);
+  }
+
+  // Map to Complaint interface
+  return (data || []).map((c: any) => ({
+    id: c.id,
+    category: c.category_id,
+    title: c.title,
+    description: c.description,
+    location: c.location || c.locationAB || c.location_address || '',
+    latitude: c.latitude,
+    longitude: c.longitude,
+    votes: c.votes ?? 0,
+    submittedDate: c.submitted_date,
+    status: c.status,
+    photo: c.photo_url || '',
+    resolutionImage: c.resolution_image,
+    resolutionImages: c.resolution_images,
+    resolvedDate: c.resolved_date,
+    verificationCount: c.verification_count,
+    daysPending: c.days_pending,
+    resolvedByOfficer: c.resolved_by_officer || c.resolved_by,
+    createdBy: c.created_by,
+    parentComplaintId: c.parent_complaint_id,
+  }));
 }
 
 export async function resolveComplaint(complaintId: number, imageUrl: string, officerName?: string) {
@@ -132,6 +169,112 @@ export async function addCitizenVerification(
 
 export async function getCitizenVerifications(complaintId: number) {
   return fetchAPI(`/complaints/${complaintId}/verifications`);
+}
+
+// Inter-Department Task Linking
+export async function createLinkedComplaint(
+  parentComplaintId: number,
+  newCategoryId: string,
+  referralNotes: string,
+  referringDepartmentName: string,
+  municipalId: string
+) {
+  const { createClient } = await import('./supabase/client');
+  const supabase = createClient();
+
+  // Get parent complaint details
+  const { data: parentComplaint, error: parentError } = await supabase
+    .from('complaints')
+    .select('*')
+    .eq('id', parentComplaintId)
+    .single();
+
+  if (parentError) {
+    throw new Error(`Failed to fetch parent complaint: ${parentError.message}`);
+  }
+
+  // Create new linked complaint with combined description
+  const combinedDescription = `${parentComplaint.description}\n\n[Referral from ${referringDepartmentName}]: ${referralNotes}`;
+
+  const { data: newComplaint, error: insertError } = await supabase
+    .from('complaints')
+    .insert({
+      municipal_id: municipalId,
+      category_id: newCategoryId,
+      title: `${parentComplaint.title} - ${referringDepartmentName} Review`,
+      description: combinedDescription,
+      // supply required address column from parent to satisfy NOT NULL constraint
+      locationAB: parentComplaint.locationAB || parentComplaint.location_address || parentComplaint.location,
+      latitude: parentComplaint.latitude,
+      longitude: parentComplaint.longitude,
+      photo_url: parentComplaint.photo_url,
+      votes: 0,
+      submitted_date: new Date().toISOString(),
+      status: 'pending',
+      parent_complaint_id: parentComplaintId,
+      created_by: 'department',
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    throw new Error(`Failed to create linked complaint: ${insertError.message}`);
+  }
+
+  return newComplaint;
+}
+
+export async function getLinkedComplaints(complaintId: number) {
+  const { createClient } = await import('./supabase/client');
+  const supabase = createClient();
+
+  const { data: linkedComplaints, error } = await supabase
+    .from('complaints')
+    .select('*')
+    .eq('parent_complaint_id', complaintId)
+    .order('submitted_date', { ascending: true });
+
+  if (error) {
+    throw new Error(`Failed to fetch linked complaints: ${error.message}`);
+  }
+
+  return linkedComplaints || [];
+}
+
+export async function getComplaintWithLinks(complaintId: number) {
+  const { createClient } = await import('./supabase/client');
+  const supabase = createClient();
+
+  // Get the complaint itself
+  const { data: complaint, error: complaintError } = await supabase
+    .from('complaints')
+    .select('*')
+    .eq('id', complaintId)
+    .single();
+
+  if (complaintError) {
+    throw new Error(`Failed to fetch complaint: ${complaintError.message}`);
+  }
+
+  // Get parent complaint if this is a linked complaint
+  let parentComplaint = null;
+  if (complaint.parent_complaint_id) {
+    const { data: parent } = await supabase
+      .from('complaints')
+      .select('*')
+      .eq('id', complaint.parent_complaint_id)
+      .single();
+    parentComplaint = parent;
+  }
+
+  // Get all linked complaints
+  const linkedComplaints = await getLinkedComplaints(complaintId);
+
+  return {
+    complaint,
+    parentComplaint,
+    linkedComplaints,
+  };
 }
 
 export interface ComplaintStats {
