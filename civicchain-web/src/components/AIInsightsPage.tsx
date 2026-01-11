@@ -15,6 +15,8 @@ import {
   ChevronRight,
   Calendar,
 } from "lucide-react";
+//adding AI features
+
 import { useState, useEffect } from "react";
 import { getComplaintsByMunicipal, Complaint } from "../utils/api";
 import {
