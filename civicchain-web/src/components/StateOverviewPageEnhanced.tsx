@@ -144,19 +144,7 @@ export function StateOverviewPageEnhanced({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="inline-flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-md">
-            <div className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-            </div>
-            <span className="text-sm text-green-800">All Systems Operational</span>
-            <Badge className="bg-green-600 text-white border-0 text-xs">Live</Badge>
-          </div>
-          <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 px-4 py-2">
-            Real-time Data
-          </Badge>
-        </div>
+        
       </div>
 
       {/* Tab Navigation */}
