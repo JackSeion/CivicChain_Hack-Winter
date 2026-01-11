@@ -12,6 +12,7 @@ import {
   Check,
   CheckCheck,
   ChevronLeft,
+  Eye,
 } from 'lucide-react';
 import * as api from '../utils/api';
 import { toast } from 'sonner@2.0.3';
@@ -322,6 +323,24 @@ export function StateCommunicationChat({ stateId, stateName }: StateCommunicatio
                             >
                               {message.messageText}
                             </p>
+                            {message.complaintId && (
+                              <button
+                                onClick={() => {
+                                  // Scroll to complaint in the escalated tab
+                                  toast.info('Complaint Reference', {
+                                    description: `This message refers to Complaint #${message.complaintId}. Check the Escalated Complaints tab.`,
+                                  });
+                                }}
+                                className={`mt-2 flex items-center gap-1 text-xs px-2 py-1 rounded ${
+                                  isFromState
+                                    ? 'bg-white bg-opacity-20 hover:bg-opacity-30 text-white'
+                                    : 'bg-blue-50 hover:bg-blue-100 text-blue-700'
+                                }`}
+                              >
+                                <Eye className="w-3 h-3" />
+                                View Complaint #{message.complaintId}
+                              </button>
+                            )}
                             <div
                               className={`flex items-center gap-1 mt-1 text-xs ${
                                 isFromState ? 'text-white text-opacity-80' : 'text-gray-500'

@@ -95,6 +95,29 @@ export async function resolveComplaint(complaintId: number, imageUrl: string, of
   });
 }
 
+export async function resolveComplaintByState(complaintId: number, notes?: string) {
+  // For state-level resolution without image requirement
+  const { createClient } = await import('./supabase/client');
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('complaints')
+    .update({
+      status: 'resolved',
+      resolved_date: new Date().toISOString(),
+      resolved_by: notes || 'State Administration',
+    })
+    .eq('id', complaintId)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to resolve complaint: ${error.message}`);
+  }
+
+  return data;
+}
+
 export async function addCitizenVerification(
   complaintId: number, 
   citizenName: string, 
@@ -423,6 +446,22 @@ export async function getStateComplaints(stateId: string): Promise<Complaint[]> 
   }));
 }
 
+export interface EscalatedComplaint {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  categoryName: string;
+  location: string;
+  municipalId: string;
+  municipalName: string;
+  submittedDate: string;
+  daysPending: number;
+  status: string;
+  photo: string;
+  votes: number;
+}
+
 export interface StateDepartmentPerformance {
   categoryId: string;
   categoryName: string;
@@ -533,6 +572,72 @@ export async function getStateDepartmentPerformance(stateId: string): Promise<St
   }
   
   return deptPerformance;
+}
+
+export async function getEscalatedComplaints(stateId: string): Promise<EscalatedComplaint[]> {
+  const { createClient } = await import('./supabase/client');
+  const supabase = createClient();
+  
+  // Get all municipals in the state
+  const { data: municipals, error: municipalsError } = await supabase
+    .from('municipals')
+    .select('id, name')
+    .eq('state_id', stateId);
+  
+  if (municipalsError) {
+    throw new Error(`Failed to fetch municipals: ${municipalsError.message}`);
+  }
+  
+  const municipalIds = municipals?.map(m => m.id) || [];
+  
+  // Get all categories
+  const { data: categories, error: categoriesError } = await supabase
+    .from('categories')
+    .select('id, name');
+  
+  if (categoriesError) {
+    throw new Error(`Failed to fetch categories: ${categoriesError.message}`);
+  }
+  
+  // Calculate date 30 days ago
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  // Get pending complaints older than 30 days
+  const { data: complaints, error: complaintsError } = await supabase
+    .from('complaints')
+    .select('*')
+    .in('municipal_id', municipalIds)
+    .eq('status', 'pending')
+    .lt('submitted_date', thirtyDaysAgo.toISOString())
+    .order('submitted_date', { ascending: true });
+  
+  if (complaintsError) {
+    throw new Error(`Failed to fetch escalated complaints: ${complaintsError.message}`);
+  }
+  
+  // Transform to EscalatedComplaint type with additional info
+  return (complaints || []).map(c => {
+    const municipal = municipals?.find(m => m.id === c.municipal_id);
+    const category = categories?.find(cat => cat.id === c.category_id);
+    const daysPending = Math.floor((new Date().getTime() - new Date(c.submitted_date).getTime()) / (1000 * 60 * 60 * 24));
+    
+    return {
+      id: c.id,
+      title: c.title,
+      description: c.description,
+      category: c.category_id,
+      categoryName: category?.name || 'Unknown',
+      location: c.location,
+      municipalId: c.municipal_id,
+      municipalName: municipal?.name || 'Unknown',
+      submittedDate: c.submitted_date,
+      daysPending,
+      status: c.status,
+      photo: c.photo_url || '',
+      votes: c.votes || 0,
+    };
+  });
 }
 
 export interface YearlyTrend {
@@ -721,6 +826,7 @@ export interface StateMessage {
   isRead: boolean;
   priority: 'low' | 'normal' | 'high' | 'urgent';
   messageType: 'text' | 'alert' | 'directive' | 'query';
+  complaintId?: number;
   municipalName?: string;
   stateName?: string;
 }
@@ -820,6 +926,7 @@ export async function getMessages(
     isRead: m.is_read,
     priority: m.priority,
     messageType: m.message_type,
+    complaintId: m.complaint_id || undefined,
     municipalName: m.municipals?.name,
     stateName: m.states?.name,
   })).reverse(); // Reverse to show oldest first
@@ -832,13 +939,18 @@ export async function sendMessage(
   senderName: string,
   messageText: string,
   priority: 'low' | 'normal' | 'high' | 'urgent' = 'normal',
-  messageType: 'text' | 'alert' | 'directive' | 'query' = 'text'
+  messageType: 'text' | 'alert' | 'directive' | 'query' = 'text',
+  complaintId?: number
 ): Promise<StateMessage> {
   const { createClient } = await import('./supabase/client');
   const supabase = createClient();
 
-  // Insert message
-  const { data: message, error: messageError } = await supabase
+  // Try to insert message with complaint_id
+  let message;
+  let messageError;
+  
+  // First attempt: with complaint_id column
+  const insertWithComplaintId = await supabase
     .from('state_municipal_messages')
     .insert({
       state_id: stateId,
@@ -849,9 +961,35 @@ export async function sendMessage(
       priority,
       message_type: messageType,
       is_read: false,
+      complaint_id: complaintId || null,
     })
     .select()
     .single();
+
+  // If schema cache error, retry without complaint_id (fallback for schema refresh delay)
+  if (insertWithComplaintId.error?.code === 'PGRST204') {
+    console.warn('Schema cache not refreshed yet, inserting without complaint_id');
+    const fallback = await supabase
+      .from('state_municipal_messages')
+      .insert({
+        state_id: stateId,
+        municipal_id: municipalId,
+        sender_type: senderType,
+        sender_name: senderName,
+        message_text: messageText,
+        priority,
+        message_type: messageType,
+        is_read: false,
+      })
+      .select()
+      .single();
+    
+    message = fallback.data;
+    messageError = fallback.error;
+  } else {
+    message = insertWithComplaintId.data;
+    messageError = insertWithComplaintId.error;
+  }
 
   if (messageError) {
     console.error('Error sending message:', messageError);
@@ -891,6 +1029,7 @@ export async function sendMessage(
     isRead: message.is_read,
     priority: message.priority,
     messageType: message.message_type,
+    complaintId: message.complaint_id || complaintId,
   };
 }
 

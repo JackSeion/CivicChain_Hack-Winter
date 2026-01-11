@@ -45,6 +45,7 @@ export default function App() {
   const [municipalName, setMunicipalName] = useState<string>('');
   const [stateId, setStateId] = useState<string>('');
   const [stateName, setStateName] = useState<string>('');
+  const [selectedComplaintId, setSelectedComplaintId] = useState<number | null>(null);
 
   // Initialize from localStorage on mount
   useEffect(() => {
@@ -164,6 +165,12 @@ export default function App() {
     toast.info('Logged out successfully');
   };
 
+  const handleViewComplaint = (complaintId: number) => {
+    setSelectedComplaintId(complaintId);
+    setCurrentPage('departments');
+    localStorage.setItem('currentPage', 'departments');
+  };
+
   const handleResolve = async (id: number, imageUrl: string) => {
     try {
       await api.resolveComplaint(id, imageUrl);
@@ -212,6 +219,7 @@ export default function App() {
             complaints={complaints}
             onResolve={handleResolve}
             loading={loading}
+            selectedComplaintId={selectedComplaintId}
           />
         );
       case 'stats':
@@ -277,6 +285,7 @@ export default function App() {
           stateName={stateName}
           municipalId={municipalId}
           municipalName={municipalName}
+          onViewComplaint={handleViewComplaint}
         />
       )}
       

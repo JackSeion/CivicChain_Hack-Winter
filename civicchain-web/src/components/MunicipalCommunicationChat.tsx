@@ -10,6 +10,7 @@ import {
   Loader2,
   Check,
   CheckCheck,
+  Eye,
 } from 'lucide-react';
 import * as api from '../utils/api';
 import { toast } from 'sonner@2.0.3';
@@ -19,6 +20,7 @@ interface MunicipalCommunicationChatProps {
   stateName: string;
   municipalId: string;
   municipalName: string;
+  onViewComplaint?: (complaintId: number) => void;
 }
 
 export function MunicipalCommunicationChat({
@@ -26,6 +28,7 @@ export function MunicipalCommunicationChat({
   stateName,
   municipalId,
   municipalName,
+  onViewComplaint,
 }: MunicipalCommunicationChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -233,6 +236,28 @@ export function MunicipalCommunicationChat({
                         >
                           {message.messageText}
                         </p>
+                        {message.complaintId && (
+                          <button
+                            onClick={() => {
+                              if (onViewComplaint) {
+                                onViewComplaint(message.complaintId!);
+                                setIsOpen(false);
+                              } else {
+                                toast.info('Complaint Reference', {
+                                  description: `This message refers to Complaint #${message.complaintId}. Check the Departments tab to view and resolve it.`,
+                                });
+                              }
+                            }}
+                            className={`mt-2 flex items-center gap-1 text-xs px-2 py-1 rounded ${
+                              isFromMunicipal
+                                ? 'bg-white bg-opacity-20 hover:bg-opacity-30 text-white'
+                                : 'bg-blue-50 hover:bg-blue-100 text-blue-700'
+                            }`}
+                          >
+                            <Eye className="w-3 h-3" />
+                            View Complaint #{message.complaintId}
+                          </button>
+                        )}
                         <div
                           className={`flex items-center gap-1 mt-1 text-xs ${
                             isFromMunicipal ? 'text-white text-opacity-80' : 'text-gray-500'
