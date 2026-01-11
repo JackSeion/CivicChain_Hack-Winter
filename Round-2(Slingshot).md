@@ -12,6 +12,8 @@ This document explains **how the full system will be built**, **how different co
 
 ## 🏗️ System Architecture & Data Flow
 
+![image alt](image_url)https://github.com/JackSeion/CivicChain_Hack-Winter/blob/407acb9a66e705edd0c41121f90eda327ca27fab/System-high-lvl.png
+
 ┌──────────────────┐
 
 │ Citizen App │
