@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -14,6 +15,7 @@ import {
 } from 'react-native';
 import { HomeFilters } from '../components/HomeFilters';
 import { HomeHeader } from '../components/HomeHeader';
+import { generateDemoHash, getBlockchainHash, isValidTxHash } from '../lib/blockchain';
 import { supabase } from '../lib/supabase';
 
 // Statuses match table values
@@ -338,6 +340,57 @@ export default function HomeScreen() {
     }
   };
 
+  // Handle verify button - open Sepolia Etherscan
+  const handleVerify = async (complaintId: number) => {
+    try {
+      // Try to fetch blockchain hash from your backend/service
+      let txHash = await getBlockchainHash(complaintId);
+      
+      if (!txHash) {
+        // Generate a demo transaction hash for demonstration purposes
+        // In production, this should come from actual blockchain transaction
+        txHash = generateDemoHash(complaintId);
+        
+        Alert.alert(
+          'Demo Mode',
+          `No blockchain transaction found for this complaint.\n\nThis is a demo. In production, complaints would be verified on the Ethereum Sepolia blockchain.\n\nDemo TX Hash: ${txHash.substring(0, 20)}...`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'View Demo on Sepolia', 
+              onPress: () => openSepoliaExplorer(txHash!)
+            }
+          ]
+        );
+        return;
+      }
+
+      // Validate the hash format
+      if (!isValidTxHash(txHash)) {
+        Alert.alert('Invalid Hash', 'The blockchain transaction hash is invalid.');
+        return;
+      }
+
+      // Open Sepolia Etherscan with the real transaction
+      openSepoliaExplorer(txHash);
+    } catch (error: any) {
+      console.error('Error verifying complaint:', error);
+      Alert.alert('Error', error.message || 'Failed to open verification link');
+    }
+  };
+
+  // Open Sepolia Etherscan in browser
+  const openSepoliaExplorer = async (txHash: string) => {
+    const url = `https://sepolia.etherscan.io/tx/${txHash}`;
+    const canOpen = await Linking.canOpenURL(url);
+    
+    if (canOpen) {
+      await Linking.openURL(url);
+    } else {
+      Alert.alert('Error', 'Cannot open Etherscan. Please check your browser settings.');
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchComplaintsAndCounts();
@@ -487,9 +540,7 @@ export default function HomeScreen() {
                   <View style={styles.actionButtons}>
                     <Pressable 
                       style={styles.verifyButton}
-                      onPress={() => {
-                        Alert.alert('Coming Soon', 'This feature will be available in a future update.');
-                      }}
+                      onPress={() => handleVerify(item.id)}
                     >
                       <Ionicons name="shield-checkmark" size={18} color="#28a745" />
                       <Text style={styles.verifyButtonText}>Verify</Text>
