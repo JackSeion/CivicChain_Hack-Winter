@@ -32,9 +32,10 @@ interface DepartmentsPageProps {
   complaints: Complaint[];
   onResolve: (id: number, imageUrl: string) => void;
   loading?: boolean;
+  selectedComplaintId?: number | null;
 }
 
-export function DepartmentsPage({ complaints, onResolve, loading }: DepartmentsPageProps) {
+export function DepartmentsPage({ complaints, onResolve, loading, selectedComplaintId }: DepartmentsPageProps) {
   const [categories, setCategories] = useState<api.Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -43,6 +44,17 @@ export function DepartmentsPage({ complaints, onResolve, loading }: DepartmentsP
   useEffect(() => {
     loadCategories();
   }, []);
+
+  // Auto-select complaint and category when selectedComplaintId changes
+  useEffect(() => {
+    if (selectedComplaintId && complaints.length > 0) {
+      const complaint = complaints.find(c => c.id === selectedComplaintId);
+      if (complaint) {
+        setSelectedCategory(complaint.category);
+        setSelectedComplaint(complaint);
+      }
+    }
+  }, [selectedComplaintId, complaints]);
 
   const loadCategories = async () => {
     try {

@@ -19,9 +19,13 @@ import {
   Sparkles,
   Building2,
   AlertCircle,
+  MessageSquare,
+  CheckCircle2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import * as api from "../utils/api";
+import { Button } from "./ui/button";
+import { toast } from "sonner@2.0.3";
 import {
   BarChart,
   Bar,
@@ -51,17 +55,19 @@ export function StateOverviewPageEnhanced({
     | "overview"
     | "comparison"
     | "departments"
-    | "escalations"
+    | "escalated"
     | "analytics"
     | "compliance"
   >("overview");
 
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [stateStats, setStateStats] = useState<api.StateStats | null>(null);
   const [municipalStats, setMunicipalStats] = useState<api.MunicipalStats[]>([]);
   const [deptPerformance, setDeptPerformance] = useState<api.StateDepartmentPerformance[]>([]);
   const [historicalTrends, setHistoricalTrends] = useState<api.YearlyTrend[]>([]);
   const [forecast, setForecast] = useState<api.CategoryForecast[]>([]);
+  const [escalatedComplaints, setEscalatedComplaints] = useState<api.EscalatedComplaint[]>([]);
 
   useEffect(() => {
     loadStateData();
@@ -70,22 +76,98 @@ export function StateOverviewPageEnhanced({
   const loadStateData = async () => {
     try {
       setLoading(true);
-      const [stats, munStats, deptPerf, trends, forecastData] = await Promise.all([
+      const [stats, munStats, deptPerf, trends, forecastData, escalated] = await Promise.all([
         api.getStateStats(stateId),
         api.getMunicipalStatsForState(stateId),
         api.getStateDepartmentPerformance(stateId),
         api.getStateHistoricalTrends(stateId),
         api.getStateForecast(stateId),
+        api.getEscalatedComplaints(stateId),
       ]);
       setStateStats(stats);
       setMunicipalStats(munStats);
       setDeptPerformance(deptPerf);
       setHistoricalTrends(trends);
       setForecast(forecastData);
+      setEscalatedComplaints(escalated);
     } catch (error) {
       console.error('Error loading state data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSeekExplanation = async (complaint: api.EscalatedComplaint) => {
+    setActionLoading(complaint.id);
+    try {
+      const messageText = `ESCALATION INQUIRY - Complaint #${complaint.id}
+
+Dear ${complaint.municipalName} Team,
+
+This complaint has been pending for ${complaint.daysPending} days and has been auto-escalated to the state level.
+
+Complaint Details:
+• Category: ${complaint.categoryName}
+• Location: ${complaint.location}
+• Submitted: ${new Date(complaint.submittedDate).toLocaleDateString()}
+
+Please provide:
+1. Current status and actions taken
+2. Reasons for delay in resolution
+3. Expected timeline for completion
+4. Any challenges or resource requirements
+
+This requires immediate attention and explanation.
+
+Regards,
+${stateName} State Administration`;
+
+      await api.sendMessage(
+        stateId,
+        complaint.municipalId,
+        'state',
+        `${stateName} State`,
+        messageText,
+        'high',
+        'query',
+        complaint.id
+      );
+
+      toast.success('Explanation request sent', {
+        description: `Message sent to ${complaint.municipalName} regarding complaint #${complaint.id}`,
+      });
+    } catch (error) {
+      console.error('Error sending explanation request:', error);
+      toast.error('Failed to send message', {
+        description: 'Please try again or contact support',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleMarkResolved = async (complaint: api.EscalatedComplaint) => {
+    setActionLoading(complaint.id);
+    try {
+      await api.resolveComplaintByState(complaint.id, `Resolved by ${stateName} State Administration`);
+      
+      // Remove from escalated list
+      setEscalatedComplaints(prev => prev.filter(c => c.id !== complaint.id));
+      
+      // Refresh state stats
+      const stats = await api.getStateStats(stateId);
+      setStateStats(stats);
+
+      toast.success('Complaint marked as resolved', {
+        description: `Complaint #${complaint.id} has been resolved at state level`,
+      });
+    } catch (error) {
+      console.error('Error resolving complaint:', error);
+      toast.error('Failed to resolve complaint', {
+        description: 'Please try again or contact support',
+      });
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -124,11 +206,6 @@ export function StateOverviewPageEnhanced({
     colors.danger,
   ];
 
-  // Calculate escalations (municipalities with low performance or high pending)
-  const escalations = municipalStats.filter(
-    (m) => m.score < 70 || m.pending > (m.totalComplaints * 0.3)
-  );
-
   return (
     <div className="p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen">
       {/* Header */}
@@ -153,7 +230,7 @@ export function StateOverviewPageEnhanced({
           { id: "overview", label: "Statewide Overview", icon: BarChart3 },
           { id: "comparison", label: "Municipal Comparison", icon: Target },
           { id: "departments", label: "Departments", icon: Users },
-          { id: "escalations", label: "Risk Monitoring", icon: AlertTriangle },
+          { id: "escalated", label: "Escalated Complaints", icon: AlertTriangle },
           { id: "analytics", label: "Analytics & Forecast", icon: TrendingUp },
           { id: "compliance", label: "Compliance", icon: Shield },
         ].map((tab) => {
@@ -616,116 +693,236 @@ export function StateOverviewPageEnhanced({
         </div>
       )}
 
-      {selectedTab === "escalations" && (
+      {selectedTab === "escalated" && (
         <div className="space-y-6">
-          {escalations.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {escalations.map((municipal, idx) => {
-                const severity =
-                  municipal.score < 60 || municipal.pending > municipal.totalComplaints * 0.4
-                    ? "critical"
-                    : "high";
-                const issue =
-                  municipal.score < 60
-                    ? "Low overall performance score"
-                    : "High pending complaint load";
-                const pendingRate = (municipal.pending / municipal.totalComplaints) * 100;
+          {/* Header Card */}
+          <Card className="p-6 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 shadow-xl">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-red-600 rounded-xl flex items-center justify-center">
+                <AlertTriangle className="w-8 h-8 text-white" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-2xl mb-1">Escalated Complaints</h2>
+                <p className="text-sm text-gray-700">
+                  Complaints pending for more than 30 days • Auto-escalated from Municipal to State level
+                </p>
+              </div>
+              <Badge className="bg-red-600 text-white border-0 text-lg px-4 py-2">
+                {escalatedComplaints.length} Escalated
+              </Badge>
+            </div>
+          </Card>
 
-                return (
-                  <Card
-                    key={idx}
-                    className={`p-6 border-l-4 ${
-                      severity === "critical"
-                        ? "border-red-500 bg-red-50"
-                        : "border-orange-500 bg-orange-50"
-                    } shadow-xl`}
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                            severity === "critical" ? "bg-red-600" : "bg-orange-600"
-                          }`}
-                        >
-                          <AlertTriangle className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-base mb-1">{municipal.municipalName}</h3>
-                          <Badge
-                            className={`${
-                              severity === "critical" ? "bg-red-600" : "bg-orange-600"
-                            } text-white border-0 text-xs`}
-                          >
-                            {severity.toUpperCase()}
-                          </Badge>
+          {escalatedComplaints.length > 0 ? (
+            <>
+              {/* Summary Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card className="p-4 bg-white border-l-4 border-red-600">
+                  <div className="text-sm text-gray-600 mb-1">Total Escalated</div>
+                  <div className="text-3xl text-red-600">{escalatedComplaints.length}</div>
+                </Card>
+                <Card className="p-4 bg-white border-l-4 border-orange-600">
+                  <div className="text-sm text-gray-600 mb-1">Avg Days Pending</div>
+                  <div className="text-3xl text-orange-600">
+                    {(escalatedComplaints.reduce((sum, c) => sum + c.daysPending, 0) / escalatedComplaints.length).toFixed(0)}
+                  </div>
+                </Card>
+                <Card className="p-4 bg-white border-l-4 border-purple-600">
+                  <div className="text-sm text-gray-600 mb-1">Oldest Complaint</div>
+                  <div className="text-3xl text-purple-600">
+                    {Math.max(...escalatedComplaints.map(c => c.daysPending))} days
+                  </div>
+                </Card>
+                <Card className="p-4 bg-white border-l-4 border-blue-600">
+                  <div className="text-sm text-gray-600 mb-1">Affected Municipals</div>
+                  <div className="text-3xl text-blue-600">
+                    {new Set(escalatedComplaints.map(c => c.municipalId)).size}
+                  </div>
+                </Card>
+              </div>
+
+              {/* Complaints List */}
+              <Card className="p-6 bg-white shadow-xl">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl">Escalated Complaints Details</h3>
+                  <Badge className="bg-orange-100 text-orange-800 border-0">
+                    Requires State Intervention
+                  </Badge>
+                </div>
+
+                <div className="space-y-4">
+                  {escalatedComplaints.map((complaint) => (
+                    <div
+                      key={complaint.id}
+                      className="p-5 bg-gradient-to-r from-red-50 to-orange-50 rounded-xl border-2 border-red-200 hover:shadow-lg transition-all"
+                    >
+                      <div className="flex items-start gap-4">
+                        {/* Image */}
+                        {complaint.photo && (
+                          <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 border-2 border-red-300">
+                            <img
+                              src={complaint.photo}
+                              alt={complaint.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge className="bg-red-600 text-white border-0">
+                                  #{complaint.id}
+                                </Badge>
+                                <Badge className="bg-orange-600 text-white border-0">
+                                  {complaint.categoryName}
+                                </Badge>
+                                <Badge className="bg-purple-100 text-purple-800 border-0">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  {complaint.daysPending} days pending
+                                </Badge>
+                              </div>
+                              <h4 className="text-lg mb-2">{complaint.title}</h4>
+                              <p className="text-sm text-gray-700 mb-3 line-clamp-2">
+                                {complaint.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-3 border-t border-red-200">
+                            <div>
+                              <div className="text-xs text-gray-600 mb-1">Municipal</div>
+                              <div className="text-sm flex items-center gap-1">
+                                <Building2 className="w-3 h-3 text-blue-600" />
+                                {complaint.municipalName}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-600 mb-1">Location</div>
+                              <div className="text-sm flex items-center gap-1">
+                                <MapPin className="w-3 h-3 text-red-600" />
+                                {complaint.location}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-600 mb-1">Submitted</div>
+                              <div className="text-sm">
+                                {new Date(complaint.submittedDate).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-600 mb-1">Community Votes</div>
+                              <div className="text-sm flex items-center gap-1">
+                                <TrendingUp className="w-3 h-3 text-green-600" />
+                                {complaint.votes} votes
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Escalation Warning */}
+                          <div className="mt-3 p-3 bg-red-100 border border-red-300 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                              <div className="text-xs text-red-800">
+                                <span className="font-semibold">Auto-escalated to State:</span> This complaint has exceeded
+                                the 30-day resolution SLA. Municipal intervention has been insufficient. State-level action
+                                may be required to ensure timely resolution.
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="mt-4 flex items-center gap-3">
+                            <Button
+                              onClick={() => handleSeekExplanation(complaint)}
+                              disabled={actionLoading === complaint.id}
+                              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                              {actionLoading === complaint.id ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <MessageSquare className="w-4 h-4 mr-2" />
+                              )}
+                              Seek Explanation
+                            </Button>
+                            <Button
+                              onClick={() => handleMarkResolved(complaint)}
+                              disabled={actionLoading === complaint.id}
+                              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              {actionLoading === complaint.id ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                              )}
+                              Mark Resolved
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                    <h3 className="text-base mb-2">{issue}</h3>
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-700">
-                        Performance Score: {municipal.score}% • Pending: {municipal.pending} (
-                        {pendingRate.toFixed(0)}%)
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        Average resolution time: {municipal.avgResolutionTime.toFixed(1)} days
-                      </p>
-                      {municipal.score < 60 && (
-                        <p className="text-sm text-gray-700">
-                          Recommendation: Immediate resource allocation and performance review required.
-                        </p>
-                      )}
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* By Municipal Breakdown */}
+              <Card className="p-6 bg-white shadow-xl">
+                <h3 className="text-xl mb-6">Escalations by Municipal</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Array.from(new Set(escalatedComplaints.map(c => c.municipalId))).map(municipalId => {
+                    const munComplaints = escalatedComplaints.filter(c => c.municipalId === municipalId);
+                    const municipal = munComplaints[0];
+                    const avgDays = munComplaints.reduce((sum, c) => sum + c.daysPending, 0) / munComplaints.length;
+                    
+                    return (
+                      <div
+                        key={municipalId}
+                        className="p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-xl border-2 border-red-200"
+                      >
+                        <div className="flex items-center gap-2 mb-3">
+                          <Building2 className="w-5 h-5 text-blue-600" />
+                          <h4 className="text-base">{municipal.municipalName}</h4>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Escalated Count</span>
+                            <Badge className="bg-red-600 text-white border-0">
+                              {munComplaints.length}
+                            </Badge>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Avg Days Pending</span>
+                            <span className="text-orange-600">{avgDays.toFixed(0)} days</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Oldest</span>
+                            <span className="text-red-600">
+                              {Math.max(...munComplaints.map(c => c.daysPending))} days
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            </>
           ) : (
             <Card className="p-6 bg-white shadow-xl">
-              <div className="text-center py-12">
-                <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
-                <h3 className="text-xl mb-2">No Critical Issues</h3>
-                <p className="text-gray-600">All municipalities are performing within acceptable parameters.</p>
+              <div className="text-center py-16">
+                <CheckCircle className="w-20 h-20 text-green-600 mx-auto mb-4" />
+                <h3 className="text-2xl mb-2">No Escalated Complaints</h3>
+                <p className="text-gray-600 mb-1">
+                  All complaints are being resolved within the 30-day SLA
+                </p>
+                <p className="text-sm text-gray-500">
+                  Excellent performance across all municipalities!
+                </p>
               </div>
             </Card>
           )}
-
-          {/* High Pressure Zones */}
-          <Card className="p-6 bg-white shadow-xl">
-            <div className="flex items-center gap-3 mb-6">
-              <AlertCircle className="w-6 h-6 text-red-600" />
-              <h2 className="text-xl">High-Pressure Zones</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {municipalStats
-                .filter(
-                  (m) =>
-                    m.pending > m.totalComplaints * 0.25 || m.score < 75
-                )
-                .map((municipal) => (
-                  <div
-                    key={municipal.municipalId}
-                    className="p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-xl border-2 border-red-200"
-                  >
-                    <h3 className="text-base mb-3">{municipal.municipalName}</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Pending Load</span>
-                        <span className="text-red-600">{municipal.pending}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Performance</span>
-                        <span className="text-orange-600">{municipal.score}%</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Avg Resolution</span>
-                        <span>{municipal.avgResolutionTime.toFixed(1)} days</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </Card>
         </div>
       )}
 

@@ -83,6 +83,7 @@ export function ComplaintCard({ complaint, onResolve, onClick }: ComplaintCardPr
   return (
     <>
       <Card 
+        id={`complaint-${complaint.id}`}
         className="overflow-hidden hover:shadow-lg transition-all cursor-pointer border-2 hover:border-blue-300"
         onClick={() => onClick(complaint)}
       >
