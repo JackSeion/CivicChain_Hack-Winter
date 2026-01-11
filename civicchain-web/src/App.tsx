@@ -10,6 +10,7 @@ import { HelpPage } from './components/HelpPage';
 import { AIInsightsPage } from './components/AIInsightsPage';
 import { MunicipalCommunicationChat } from './components/MunicipalCommunicationChat';
 import { StateOverviewPageEnhanced } from '@/components/StateOverviewPageEnhanced';
+import { StateCommunicationChat } from '@/components/StateCommunicationChat';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner@2.0.3';
 import * as api from './utils/api';
@@ -250,6 +251,8 @@ export default function App() {
 
           <StateOverviewPageEnhanced stateId={stateId} stateName={stateName} />
         </div>
+
+        <StateCommunicationChat stateId={stateId} stateName={stateName} />
 
         <Toaster position="top-right" />
       </>
