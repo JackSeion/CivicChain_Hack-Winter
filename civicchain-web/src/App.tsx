@@ -9,6 +9,7 @@ import { ReportsPage } from './components/ReportsPage';
 import { HelpPage } from './components/HelpPage';
 import { AIInsightsPage } from './components/AIInsightsPage';
 import { MunicipalCommunicationChat } from './components/MunicipalCommunicationChat';
+import { StateOverviewPageEnhanced } from '@/components/StateOverviewPageEnhanced';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner@2.0.3';
 import * as api from './utils/api';
@@ -35,6 +36,7 @@ interface Complaint {
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userType, setUserType] = useState<'municipal' | 'state' | null>(null);
   const [currentPage, setCurrentPage] = useState('overview');
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,12 +52,24 @@ export default function App() {
     const savedStateId = localStorage.getItem('stateId');
     const savedStateName = localStorage.getItem('stateName');
     const savedCurrentPage = localStorage.getItem('currentPage');
+    const savedUserType = localStorage.getItem('userType') as 'municipal' | 'state' | null;
 
-    if (savedMunicipalId && savedMunicipalName) {
+    // Restore state dashboard session
+    if (savedUserType === 'state' && savedStateId && savedStateName) {
+      setUserType('state');
+      setIsLoggedIn(true);
+      setStateId(savedStateId);
+      setStateName(savedStateName);
+      setCurrentPage(savedCurrentPage || 'state-overview');
+      return;
+    }
+
+    // Restore municipal dashboard session (also fallback for older localStorage without userType)
+    if ((savedUserType === 'municipal' || !savedUserType) && savedMunicipalId && savedMunicipalName) {
+      setUserType('municipal');
       setIsLoggedIn(true);
       setMunicipalId(savedMunicipalId);
       setMunicipalName(savedMunicipalName);
-      // Load state info for municipal login
       if (savedStateId && savedStateName) {
         setStateId(savedStateId);
         setStateName(savedStateName);
@@ -68,10 +82,10 @@ export default function App() {
 
   // Load complaints when logged in
   useEffect(() => {
-    if (isLoggedIn && municipalId) {
+    if (isLoggedIn && userType === 'municipal' && municipalId) {
       loadComplaints();
     }
-  }, [isLoggedIn, municipalId]);
+  }, [isLoggedIn, municipalId, userType]);
 
   // Save current page to localStorage whenever it changes
   useEffect(() => {
@@ -95,47 +109,57 @@ export default function App() {
     }
   };
 
-  const handleLogin = (municipalId: string, municipalName: string) => {
+  const handleMunicipalLogin = (municipalId: string, municipalName: string, selectedStateId: string, selectedStateName: string) => {
     setIsLoggedIn(true);
+    setUserType('municipal');
     setMunicipalId(municipalId);
     setMunicipalName(municipalName);
+    setStateId(selectedStateId);
+    setStateName(selectedStateName);
     setCurrentPage('overview');
-    
-    // Get state ID from localStorage (set during municipal selection in LoginPage)
-    const savedStateId = localStorage.getItem('selectedStateId');
-    const savedStateName = localStorage.getItem('selectedStateName');
-    
-    if (savedStateId && savedStateName) {
-      setStateId(savedStateId);
-      setStateName(savedStateName);
-      localStorage.setItem('stateId', savedStateId);
-      localStorage.setItem('stateName', savedStateName);
-    }
-    
-    // Save to localStorage
+
+    localStorage.setItem('userType', 'municipal');
     localStorage.setItem('municipalId', municipalId);
     localStorage.setItem('municipalName', municipalName);
+    localStorage.setItem('stateId', selectedStateId);
+    localStorage.setItem('stateName', selectedStateName);
     localStorage.setItem('currentPage', 'overview');
-    
+
     toast.success(`Successfully logged in to ${municipalName}`);
+  };
+
+  const handleStateLogin = (stateId: string, stateName: string) => {
+    setIsLoggedIn(true);
+    setUserType('state');
+    setStateId(stateId);
+    setStateName(stateName);
+    setCurrentPage('state-overview');
+
+    localStorage.setItem('userType', 'state');
+    localStorage.setItem('stateId', stateId);
+    localStorage.setItem('stateName', stateName);
+    localStorage.setItem('currentPage', 'state-overview');
+
+    toast.success(`Welcome to ${stateName} state dashboard`);
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setUserType(null);
     setCurrentPage('overview');
     setMunicipalId('');
     setMunicipalName('');
     setStateId('');
     setStateName('');
     setComplaints([]);
-    
-    // Clear localStorage
+
+    localStorage.removeItem('userType');
     localStorage.removeItem('municipalId');
     localStorage.removeItem('municipalName');
     localStorage.removeItem('stateId');
     localStorage.removeItem('stateName');
     localStorage.removeItem('currentPage');
-    
+
     toast.info('Logged out successfully');
   };
 
@@ -173,10 +197,10 @@ export default function App() {
   };
 
   if (!isLoggedIn) {
-    return <LoginPage onLogin={handleLogin} />;
+    return <LoginPage onMunicipalLogin={handleMunicipalLogin} onStateLogin={handleStateLogin} />;
   }
 
-  const renderPage = () => {
+  const renderMunicipalPage = () => {
     // Show all pages for municipal login
     switch (currentPage) {
       case 'overview':
@@ -204,6 +228,34 @@ export default function App() {
     }
   };
 
+  if (userType === 'state') {
+    return (
+      <>
+        <div className="min-h-screen bg-gray-50">
+          <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
+            <div>
+              <p className="text-sm text-gray-500">State Dashboard</p>
+              <h2 className="text-2xl text-gray-900">{stateName}</h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm border border-blue-100">{stateId}</span>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 transition"
+              >
+                Logout
+              </button>
+            </div>
+          </header>
+
+          <StateOverviewPageEnhanced stateId={stateId} stateName={stateName} />
+        </div>
+
+        <Toaster position="top-right" />
+      </>
+    );
+  }
+
   return (
     <>
       <DashboardLayout
@@ -212,7 +264,7 @@ export default function App() {
         onLogout={handleLogout}
         municipalName={municipalName}
       >
-        {renderPage()}
+        {renderMunicipalPage()}
       </DashboardLayout>
       
       {/* Municipal Communication Chat */}
