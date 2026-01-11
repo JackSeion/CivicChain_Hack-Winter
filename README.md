@@ -1,5 +1,31 @@
-# 🏛️ CivicChain
+<p align="center">
+  <img width="200" alt="CivicChain Logo" src="https://github.com/user-attachments/assets/f435169f-96b9-4465-8f3b-064265eddeaf" />
+</p>
+<h1>CivicChain</h1>
 ### Transparent Civic Complaint & Accountability Platform
+
+---
+<p align="center">
+  <a href="https://main.dh24eax8mj2ht.amplifyapp.com">
+    <img src="https://img.shields.io/badge/Website%20Live-success?style=for-the-badge" />
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://github.com/JackSeion/CivicChain_Hack-Winter">
+    <img src="https://img.shields.io/badge/CODE-black?style=for-the-badge" />
+  </a>
+</p>
+
+
+
+<p align="center">
+  <a href="https://drive.google.com/file/d/13fLF3rdTQOeDDEPvhunIoSITZdJdRaL9/view?usp=drivesdk">
+    <img src="https://img.shields.io/badge/📱%20App%20Video-Watch-blue?style=for-the-badge" />
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://drive.google.com/file/d/1uDKkPBkldkFldMQBtiuLKkk1-B4lI8DG/view?usp=drivesdk">
+    <img src="https://img.shields.io/badge/🌐%20Website%20Video-Watch-green?style=for-the-badge" />
+  </a>
+</p>
 
 ---
 
@@ -170,7 +196,7 @@ This ensures **citizen-approved resolution**, not just internal status updates.
 
 ---
 
-## 🔗 Blockchain Integration (Planned – Round 2)
+## 🔗 Blockchain Integration
 
 - Verified and resolved complaint IDs logged on-chain  
 - Immutable public audit trail  
@@ -182,7 +208,7 @@ Blockchain is used as a **trust layer**, not as a database replacement.
 
 ---
 
-## 🏛️ State-Level Dashboard (Planned – Round 2)
+## 🏛️ State-Level Dashboard
 
 - State government can monitor:
   - City-wise performance  
@@ -193,7 +219,7 @@ Enables **top-down governance oversight**.
 
 ---
 
-## 🎁 Rewarding System (Planned – Round 2)
+## 🎁 Rewarding System 
 
 - First reporter of a complaint earns **Civic Responsibility Points**  
 - Encourages proactive civic participation  
@@ -213,15 +239,6 @@ Enables **top-down governance oversight**.
 
 ---
 
-## 🔮 What We Will Add in Round 2 (**Mandatory**)
-
-- Blockchain-based complaint audit trail  
-- AI-driven issue prediction & prioritization  
-- State-level governance dashboard  
-- Civic responsibility reward system  
-- Advanced hotspot analytics  
-
----
 
 ## 🏁 Conclusion
 

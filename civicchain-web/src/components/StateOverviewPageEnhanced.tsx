@@ -242,6 +242,8 @@ ${stateName} State Administration`;
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
                 selectedTab === tab.id
                   ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
+                  : tab.id === "escalated"
+                  ? "bg-red-600 hover:bg-red-700 text-white hover:shadow-md hover:scale-105"
                   : "bg-gray-50 hover:bg-gray-100 text-gray-700"
               }`}
             >

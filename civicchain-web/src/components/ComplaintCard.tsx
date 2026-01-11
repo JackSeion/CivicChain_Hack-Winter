@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { MapPin, ThumbsUp, Calendar, CheckCircle, Users } from "lucide-react";
+import { MapPin, ThumbsUp, Calendar, CheckCircle, Users, Link2, Building2 } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { ResolveDialog } from "./ResolveDialog";
 
@@ -24,15 +24,19 @@ interface Complaint {
   verificationCount?: number;
   daysPending?: number;
   resolvedByOfficer?: string;
+  parentComplaintId?: number;
+  departmentReferral?: string;
+  createdBy?: string;
 }
 
 interface ComplaintCardProps {
   complaint: Complaint;
   onResolve: (id: number | string, imageUrl: string) => void;
   onClick: (complaint: Complaint) => void;
+  onLinkClick?: (complaint: Complaint) => void;
 }
 
-export function ComplaintCard({ complaint, onResolve, onClick }: ComplaintCardProps) {
+export function ComplaintCard({ complaint, onResolve, onClick, onLinkClick }: ComplaintCardProps) {
   const [showResolveDialog, setShowResolveDialog] = useState(false);
 
   const statusConfig = {
@@ -80,14 +84,32 @@ export function ComplaintCard({ complaint, onResolve, onClick }: ComplaintCardPr
     window.open(mapsUrl, '_blank');
   };
 
+  // Flags for conditional styling
+  const isDepartment = (complaint.createdBy === 'department' || (complaint as any).created_by === 'department');
+  const isLinked = Boolean(complaint.parentComplaintId || (complaint as any).parent_complaint_id);
+  // Try to derive referring department name from title suffix: " - {Dept} Review"
+  let referringDept: string | null = null;
+  if (isDepartment && typeof complaint.title === 'string') {
+    const match = complaint.title.match(/\s-\s(.+?)\sReview$/);
+    referringDept = match?.[1] || null;
+  }
+
   return (
     <>
       <Card 
         id={`complaint-${complaint.id}`}
-        className="overflow-hidden hover:shadow-lg transition-all cursor-pointer border-2 hover:border-blue-300"
+        className={`overflow-hidden hover:shadow-lg transition-all cursor-pointer border-2 ${
+          isDepartment
+            ? 'border-blue-500 hover:border-blue-600 bg-gradient-to-r from-blue-50 to-cyan-50'
+            : isLinked
+              ? 'border-amber-400 hover:border-amber-500 bg-gradient-to-r from-amber-50 to-orange-50'
+              : 'hover:border-blue-300'
+        }`}
         onClick={() => onClick(complaint)}
       >
-        <div className="flex flex-col md:flex-row">
+        {/* Left accent bar for department-created complaints */}
+        {isDepartment && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600" />}
+        <div className="flex flex-col md:flex-row relative">
           {/* Images Section - Complaint + Resolution */}
           <div className={`${
             (complaint.status === 'resolved' || complaint.status === 'verified') && 
@@ -158,6 +180,17 @@ export function ComplaintCard({ complaint, onResolve, onClick }: ComplaintCardPr
               <div className="flex-1 pr-4">
                 <h3 className="mb-2">{complaint.title}</h3>
                 <p className="text-gray-600 mb-3 line-clamp-2">{complaint.description}</p>
+                {isDepartment && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
+                      <Building2 className="w-3 h-3" />
+                      {referringDept ? `Referred from ${referringDept}` : 'Department Task'}
+                    </Badge>
+                  </div>
+                )}
+                {!isDepartment && isLinked && (
+                  <Badge className="bg-amber-100 text-amber-800">Linked Complaint</Badge>
+                )}
               </div>
               <Badge className={status.className}>
                 {status.label}
@@ -232,6 +265,20 @@ export function ComplaintCard({ complaint, onResolve, onClick }: ComplaintCardPr
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Mark Resolved
+                </Button>
+              )}
+              {complaint.status === 'pending' && onLinkClick && (
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onLinkClick(complaint);
+                  }}
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Link2 className="w-4 h-4" />
+                  Link to Department
                 </Button>
               )}
             </div>

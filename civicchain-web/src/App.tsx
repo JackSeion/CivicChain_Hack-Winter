@@ -33,6 +33,8 @@ interface Complaint {
   verificationCount?: number;
   daysPending?: number;
   resolvedByOfficer?: string;
+  createdBy?: string;
+  parentComplaintId?: number;
 }
 
 export default function App() {
@@ -46,6 +48,13 @@ export default function App() {
   const [stateId, setStateId] = useState<string>('');
   const [stateName, setStateName] = useState<string>('');
   const [selectedComplaintId, setSelectedComplaintId] = useState<number | null>(null);
+  
+  // Linking state - lifted to App level for reliable rendering
+  const [linkingComplaint, setLinkingComplaint] = useState<Complaint | null>(null);
+  const [categories, setCategories] = useState<api.Category[]>([]);
+  const [linkTargetCategory, setLinkTargetCategory] = useState<string>('');
+  const [linkNotes, setLinkNotes] = useState('');
+  const [linkLoading, setLinkLoading] = useState(false);
 
   // Initialize from localStorage on mount
   useEffect(() => {
@@ -100,7 +109,8 @@ export default function App() {
     try {
       setLoading(true);
       const data = await api.getComplaintsByMunicipal(municipalId);
-      setComplaints(data as any);
+      // API now returns properly mapped data with createdBy and parentComplaintId
+      setComplaints(data as Complaint[]);
     } catch (error) {
       console.error('Error loading complaints:', error);
       toast.error('Failed to load complaints', {
@@ -171,6 +181,74 @@ export default function App() {
     localStorage.setItem('currentPage', 'departments');
   };
 
+  // Load categories for linking
+  useEffect(() => {
+    api.getCategories().then(setCategories).catch(console.error);
+  }, []);
+
+  const handleLinkComplaint = (complaint: Complaint) => {
+    setLinkingComplaint(complaint);
+    setLinkTargetCategory('');
+    setLinkNotes('');
+  };
+
+  const handleSubmitLink = async () => {
+    if (!linkingComplaint || !linkTargetCategory || !linkNotes.trim()) return;
+    setLinkLoading(true);
+    try {
+      const currentCatName = categories.find(c => c.id === linkingComplaint.category)?.name || linkingComplaint.category;
+      const newComplaint = await api.createLinkedComplaint(
+        linkingComplaint.id,
+        linkTargetCategory,
+        linkNotes,
+        currentCatName,
+        municipalId
+      );
+      // Map returned fields (snake_case from Supabase) into local shape and prepend so it shows immediately
+      const mappedComplaint: Complaint = {
+        id: newComplaint.id,
+        category: newComplaint.category_id || linkTargetCategory,
+        title: newComplaint.title || `${linkingComplaint.title} - ${currentCatName} Review`,
+        description: newComplaint.description || linkNotes,
+        location: newComplaint.location || linkingComplaint.location,
+        latitude: newComplaint.latitude ?? linkingComplaint.latitude,
+        longitude: newComplaint.longitude ?? linkingComplaint.longitude,
+        votes: newComplaint.votes ?? 0,
+        submittedDate: newComplaint.submitted_date || new Date().toISOString(),
+        status: (newComplaint.status as Complaint['status']) || 'pending',
+        photo: newComplaint.photo_url || linkingComplaint.photo,
+        resolutionImage: newComplaint.resolution_image,
+        resolutionImages: newComplaint.resolution_images,
+        resolvedDate: newComplaint.resolved_date,
+        verificationCount: newComplaint.verification_count,
+        daysPending: newComplaint.days_pending,
+        resolvedByOfficer: newComplaint.resolved_by_officer,
+        parentComplaintId: newComplaint.parent_complaint_id ?? linkingComplaint.id,
+        departmentReferral: undefined,
+        createdBy: newComplaint.created_by || 'department',
+      };
+
+      setComplaints(prev => {
+        const withoutDup = prev.filter(c => c.id !== mappedComplaint.id);
+        return [mappedComplaint, ...withoutDup];
+      });
+
+      toast.success('Complaint linked successfully!');
+      setLinkingComplaint(null);
+    } catch (error) {
+      console.error('Error linking complaint:', error);
+      toast.error('Failed to link complaint');
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const closeLinkPage = () => {
+    setLinkingComplaint(null);
+    setLinkTargetCategory('');
+    setLinkNotes('');
+  };
+
   const handleResolve = async (id: number, imageUrl: string) => {
     try {
       await api.resolveComplaint(id, imageUrl);
@@ -220,6 +298,7 @@ export default function App() {
             onResolve={handleResolve}
             loading={loading}
             selectedComplaintId={selectedComplaintId}
+            onLinkComplaint={handleLinkComplaint}
           />
         );
       case 'stats':
@@ -289,6 +368,90 @@ export default function App() {
         />
       )}
       
+      {/* Link Complaint Dialog - rendered at App level */}
+      {linkingComplaint && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={closeLinkPage}
+        >
+          <div
+            className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b bg-white/80 backdrop-blur">
+              <div>
+                <p className="text-sm text-gray-500">Inter-Department Task Linking</p>
+                <h2 className="text-2xl font-semibold text-gray-900">Create Sub-Complaint in Another Department</h2>
+              </div>
+              <button
+                onClick={closeLinkPage}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2 px-6 pb-6 pt-4">
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-gray-600 mb-2">Original Complaint</p>
+                <h3 className="font-semibold text-gray-900">{linkingComplaint.title}</h3>
+                <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{linkingComplaint.description}</p>
+                <span className="inline-block mt-2 px-2 py-1 bg-blue-200 text-blue-800 text-xs rounded">
+                  {categories.find(c => c.id === linkingComplaint.category)?.name || linkingComplaint.category}
+                </span>
+              </div>
+
+              <div className="p-4 bg-white border border-gray-200 rounded-lg">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">Refer to Department</label>
+                    <select
+                      className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={linkTargetCategory}
+                      onChange={(e) => setLinkTargetCategory(e.target.value)}
+                    >
+                      <option value="">Select department</option>
+                      {categories
+                        .filter(cat => cat.id !== linkingComplaint.category)
+                        .map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">Referral Notes</label>
+                    <textarea
+                      className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      rows={6}
+                      placeholder="Describe what the other department needs to do..."
+                      value={linkNotes}
+                      onChange={(e) => setLinkNotes(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={closeLinkPage}
+                      className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSubmitLink}
+                      disabled={!linkTargetCategory || !linkNotes.trim() || linkLoading}
+                      className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {linkLoading ? 'Creating...' : 'Create Sub-Complaint'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Toaster position="top-right" />
     </>
   );
