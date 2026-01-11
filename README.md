@@ -170,7 +170,7 @@ This ensures **citizen-approved resolution**, not just internal status updates.
 
 ---
 
-## 🔗 Blockchain Integration (Planned – Round 2)
+## 🔗 Blockchain Integration
 
 - Verified and resolved complaint IDs logged on-chain  
 - Immutable public audit trail  
@@ -182,7 +182,7 @@ Blockchain is used as a **trust layer**, not as a database replacement.
 
 ---
 
-## 🏛️ State-Level Dashboard (Planned – Round 2)
+## 🏛️ State-Level Dashboard
 
 - State government can monitor:
   - City-wise performance  
@@ -193,7 +193,7 @@ Enables **top-down governance oversight**.
 
 ---
 
-## 🎁 Rewarding System (Planned – Round 2)
+## 🎁 Rewarding System 
 
 - First reporter of a complaint earns **Civic Responsibility Points**  
 - Encourages proactive civic participation  
@@ -213,15 +213,6 @@ Enables **top-down governance oversight**.
 
 ---
 
-## 🔮 What We Will Add in Round 2 (**Mandatory**)
-
-- Blockchain-based complaint audit trail  
-- AI-driven issue prediction & prioritization  
-- State-level governance dashboard  
-- Civic responsibility reward system  
-- Advanced hotspot analytics  
-
----
 
 ## 🏁 Conclusion
 
