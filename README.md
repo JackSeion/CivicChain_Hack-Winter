@@ -1,5 +1,31 @@
-# 🏛️ CivicChain
+<p align="center">
+  <img width="200" alt="CivicChain Logo" src="https://github.com/user-attachments/assets/f435169f-96b9-4465-8f3b-064265eddeaf" />
+</p>
+<h1>CivicChain</h1>
 ### Transparent Civic Complaint & Accountability Platform
+
+---
+<p align="center">
+  <a href="https://main.dh24eax8mj2ht.amplifyapp.com">
+    <img src="https://img.shields.io/badge/Website%20Live-success?style=for-the-badge" />
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://github.com/JackSeion/CivicChain_Hack-Winter">
+    <img src="https://img.shields.io/badge/CODE-black?style=for-the-badge" />
+  </a>
+</p>
+
+
+
+<p align="center">
+  <a href="https://drive.google.com/file/d/13fLF3rdTQOeDDEPvhunIoSITZdJdRaL9/view?usp=drivesdk">
+    <img src="https://img.shields.io/badge/📱%20App%20Video-Watch-blue?style=for-the-badge" />
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://drive.google.com/file/d/1uDKkPBkldkFldMQBtiuLKkk1-B4lI8DG/view?usp=drivesdk">
+    <img src="https://img.shields.io/badge/🌐%20Website%20Video-Watch-green?style=for-the-badge" />
+  </a>
+</p>
 
 ---
 
