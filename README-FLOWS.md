@@ -28,7 +28,8 @@ Display in City Feed
 
 ## 🔹 Flow 1: Technical Flow
 
-![image alt](image_url)https://github.com/JackSeion/CivicChain_Hack-Winter/blob/2244b0ce817d4d5d64f2ec2c8fedfa761dd4b130/techflow.jpeg
+![techflow](https://github.com/user-attachments/assets/1feda670-4ed3-4a78-bdc4-97a8b2b0b99a)
+
 
 ---
 
